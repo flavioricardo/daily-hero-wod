@@ -1,7 +1,8 @@
-import React from "react"; // eslint-disable-line no-unused-vars
-import { useState, useEffect } from "react";
+// eslint-disable-next-line no-unused-vars
+import React, { useState, useEffect } from "react";
 import {
   Box,
+  ColorSchemeProvider,
   ComboBox,
   SelectList,
   TextField,
@@ -10,8 +11,11 @@ import {
   Table,
   IconButton,
   Icon,
+  Tabs,
 } from "gestalt";
 import "gestalt/dist/gestalt.css";
+import { DatePicker } from "gestalt-datepicker";
+import "gestalt-datepicker/dist/gestalt-datepicker.css";
 
 const WEIGHT_UNITS = {
   KG: "kg",
@@ -30,9 +34,13 @@ function DailyHeroWod() {
   const [recordType, setRecordType] = useState(RECORD_TYPES.TIME);
   const [recordValue, setRecordValue] = useState("");
   const [weightUnit, setWeightUnit] = useState(WEIGHT_UNITS.KG);
+  const [recordDate, setRecordDate] = useState(null);
   const [workoutOptions, setWorkoutOptions] = useState([]);
   const [error, setError] = useState("");
   const [isTypeReadOnly, setIsTypeReadOnly] = useState(false);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [colorScheme, setColorScheme] = useState("light");
 
   useEffect(() => {
     loadRecordsFromLocalStorage();
@@ -70,6 +78,7 @@ function DailyHeroWod() {
     setRecordType(RECORD_TYPES.TIME);
     setRecordValue("");
     setWeightUnit(WEIGHT_UNITS.KG);
+    setRecordDate(null);
     setIsTypeReadOnly(false);
     console.log("Fields cleared");
   };
@@ -133,8 +142,9 @@ function DailyHeroWod() {
       recordType,
       recordValue,
       weightUnit,
+      recordDate,
     });
-    if (workout && recordValue) {
+    if (workout && recordValue && recordDate) {
       setError("");
       const newRecord = {
         workout,
@@ -143,7 +153,7 @@ function DailyHeroWod() {
           recordType === RECORD_TYPES.WEIGHT
             ? `${recordValue} ${weightUnit}`
             : recordValue.trim(),
-        date: new Date().toISOString(),
+        date: recordDate.toISOString(),
       };
       const newRecords = [...records, newRecord];
       setRecords(newRecords);
@@ -154,7 +164,7 @@ function DailyHeroWod() {
       }
       clearFields();
     } else {
-      console.log("Workout or recordValue is missing");
+      console.log("Workout, recordValue, or recordDate is missing");
     }
   };
 
@@ -197,182 +207,232 @@ function DailyHeroWod() {
     return records.indexOf(sortedRecords[0]);
   };
 
+  const tabs = [
+    { id: "addRecord", text: "Add Record" },
+    { id: "viewRecords", text: "View Records" },
+  ];
+
   return (
-    <Box
-      padding={6}
-      display="flex"
-      direction="column"
-      alignItems="center"
-      width="100%"
-    >
-      <Text size="500" weight="bold" accessibilityLevel={1}>
-        DailyHeroWod - Hero WODs & Hyrox
-      </Text>
+    <ColorSchemeProvider colorScheme={colorScheme}>
       <Box
-        paddingY={4}
-        width="100%"
+        padding={6}
         display="flex"
         direction="column"
         alignItems="center"
-        gap={4}
+        width="100%"
       >
-        <Box width="100%" marginBottom={2}>
-          <ComboBox
-            id="workout"
-            label="Workout or Personal Record"
-            onChange={handleWorkoutChange}
-            onSelect={handleWorkoutSelect}
-            onClear={clearFields}
-            options={workoutOptions.map((workout) => ({
-              label: workout,
-              value: workout,
-            }))}
-            placeholder="Select or type a workout"
-            inputValue={workout}
-            allowCustomValue
+        <Box position="absolute" top right margin={4}>
+          <IconButton
+            accessibilityLabel="Toggle color scheme"
+            icon={colorScheme === "light" ? "lightbulb" : "moon"}
+            iconColor="darkGray"
+            size="lg"
+            onClick={() =>
+              setColorScheme(colorScheme === "light" ? "dark" : "light")
+            }
           />
         </Box>
-        <Box width="100%" marginBottom={2}>
-          <SelectList
-            id="recordType"
-            label="Record Type"
-            name="recordType"
-            onChange={({ value }) => setRecordType(value)}
-            value={recordType}
-            disabled={isTypeReadOnly}
+        <Text size="500" weight="bold" accessibilityLevel={1}>
+          DailyHeroWod - Hero WODs & Hyrox
+        </Text>
+        <Tabs
+          activeTabIndex={activeTabIndex}
+          onChange={({ activeTabIndex }) => setActiveTabIndex(activeTabIndex)}
+          tabs={tabs}
+        />
+        {activeTabIndex === 0 && (
+          <Box
+            paddingY={4}
+            width="100%"
+            display="flex"
+            direction="column"
+            alignItems="center"
+            gap={4}
           >
-            <SelectList.Option label="Time" value={RECORD_TYPES.TIME} />
-            <SelectList.Option label="Weight" value={RECORD_TYPES.WEIGHT} />
-            <SelectList.Option label="Reps" value={RECORD_TYPES.REPS} />
-          </SelectList>
-        </Box>
-        <Box
-          width="100%"
-          marginBottom={2}
-          display="flex"
-          alignItems="center"
-          gap={2}
-        >
-          <Box flex="grow">
-            <TextField
-              id="recordValue"
-              type="text"
-              mobileInputMode="numeric"
-              label={
-                recordType === RECORD_TYPES.TIME
-                  ? "Time (HH:MM:SS)"
-                  : recordType === RECORD_TYPES.WEIGHT
-                  ? "Weight"
-                  : "Reps"
-              }
-              value={recordValue}
-              onChange={({ value }) =>
-                setRecordValue(
-                  recordType === RECORD_TYPES.TIME
-                    ? formatTimeInput(value)
-                    : value
-                )
-              }
-              placeholder={
-                recordType === RECORD_TYPES.TIME
-                  ? "00:00:00"
-                  : recordType === RECORD_TYPES.WEIGHT
-                  ? "Enter weight"
-                  : "Enter reps"
-              }
-            />
-          </Box>
-          {recordType === RECORD_TYPES.WEIGHT && (
-            <Box marginStart={2}>
+            <Box width="100%" marginBottom={2}>
+              <ComboBox
+                id="workout"
+                label="Workout or Personal Record"
+                onChange={handleWorkoutChange}
+                onSelect={handleWorkoutSelect}
+                onClear={clearFields}
+                options={workoutOptions.map((workout) => ({
+                  label: workout,
+                  value: workout,
+                }))}
+                placeholder="Select or type a workout"
+                inputValue={workout}
+                allowCustomValue
+              />
+            </Box>
+            <Box width="100%" marginBottom={2}>
               <SelectList
-                id="weightUnit"
-                label="Unit"
-                name="weightUnit"
-                onChange={({ value }) => setWeightUnit(value)}
-                value={weightUnit}
+                id="recordType"
+                label="Record Type"
+                name="recordType"
+                onChange={({ value }) => setRecordType(value)}
+                value={recordType}
+                disabled={isTypeReadOnly}
               >
-                <SelectList.Option label="kg" value={WEIGHT_UNITS.KG} />
-                <SelectList.Option label="lb" value={WEIGHT_UNITS.LB} />
+                <SelectList.Option label="Time" value={RECORD_TYPES.TIME} />
+                <SelectList.Option label="Weight" value={RECORD_TYPES.WEIGHT} />
+                <SelectList.Option label="Reps" value={RECORD_TYPES.REPS} />
               </SelectList>
             </Box>
-          )}
-        </Box>
-        {error && (
-          <Text color="red" marginBottom={2}>
-            {error}
-          </Text>
-        )}
-        <Box width="100%" marginBottom={2}>
-          <Button
-            text="Add Record"
-            onClick={addRecord}
-            color="red"
-            size="lg"
-            rounded
-            fullWidth
-          />
-        </Box>
-      </Box>
-      <Box marginTop={6} width="100%" padding={3} borderStyle="sm">
-        <Text size="400" weight="bold">
-          Recent Records
-        </Text>
-        {Object.keys(groupedRecords).map((workout) => {
-          const sortedRecords = sortRecords(groupedRecords[workout]);
-          const bestRecordIndex = getBestRecordIndex(sortedRecords);
-          return (
-            <Box key={workout} marginBottom={4}>
-              <Text size="300" weight="bold">
-                {workout}
-              </Text>
-              <Table accessibilityLabel={`${workout} Records`}>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.HeaderCell>Value</Table.HeaderCell>
-                    <Table.HeaderCell>Date</Table.HeaderCell>
-                    <Table.HeaderCell>Actions</Table.HeaderCell>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {sortedRecords.map((record, index) => (
-                    <Table.Row key={index}>
-                      <Table.Cell>
-                        <Box display="flex" alignItems="center">
-                          {index === bestRecordIndex && (
-                            <Box marginEnd={2}>
-                              <Icon
-                                accessibilityLabel="Best record"
-                                icon="star"
-                                color="warning"
-                                inline
-                                size="16"
-                              />
-                            </Box>
-                          )}
-                          {record.recordType === RECORD_TYPES.REPS
-                            ? `${record.recordValue} reps`
-                            : record.recordValue}
-                        </Box>
-                      </Table.Cell>
-                      <Table.Cell>{formatDate(record.date)}</Table.Cell>
-                      <Table.Cell>
-                        <IconButton
-                          accessibilityLabel="Delete record"
-                          icon="trash-can"
-                          iconColor="red"
-                          size="md"
-                          onClick={() => deleteRecord(index)}
-                        />
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table>
+            <Box
+              width="100%"
+              marginBottom={2}
+              display="flex"
+              alignItems="center"
+              gap={2}
+            >
+              <Box flex="grow">
+                <TextField
+                  id="recordValue"
+                  type="text"
+                  mobileInputMode="numeric"
+                  label={
+                    recordType === RECORD_TYPES.TIME
+                      ? "Time (HH:MM:SS)"
+                      : recordType === RECORD_TYPES.WEIGHT
+                      ? "Weight"
+                      : "Reps"
+                  }
+                  value={recordValue}
+                  onChange={({ value }) =>
+                    setRecordValue(
+                      recordType === RECORD_TYPES.TIME
+                        ? formatTimeInput(value)
+                        : value
+                    )
+                  }
+                  placeholder={
+                    recordType === RECORD_TYPES.TIME
+                      ? "00:00:00"
+                      : recordType === RECORD_TYPES.WEIGHT
+                      ? "Enter weight"
+                      : "Enter reps"
+                  }
+                />
+              </Box>
+              {recordType === RECORD_TYPES.WEIGHT && (
+                <Box marginStart={2}>
+                  <SelectList
+                    id="weightUnit"
+                    label="Unit"
+                    name="weightUnit"
+                    onChange={({ value }) => setWeightUnit(value)}
+                    value={weightUnit}
+                  >
+                    <SelectList.Option label="kg" value={WEIGHT_UNITS.KG} />
+                    <SelectList.Option label="lb" value={WEIGHT_UNITS.LB} />
+                  </SelectList>
+                </Box>
+              )}
             </Box>
-          );
-        })}
+            <Box width="100%" marginBottom={2}>
+              <DatePicker
+                id="recordDate"
+                label="Date"
+                onChange={({ value }) => setRecordDate(value)}
+                value={recordDate}
+                placeholder="Select date"
+              />
+            </Box>
+            {error && (
+              <Text color="red" marginBottom={2}>
+                {error}
+              </Text>
+            )}
+            <Box width="100%" marginBottom={2}>
+              <Button
+                text="Add Record"
+                onClick={addRecord}
+                color="red"
+                size="lg"
+                rounded
+                fullWidth
+              />
+            </Box>
+          </Box>
+        )}
+        {activeTabIndex === 1 && (
+          <Box marginTop={6} width="100%" padding={3} borderStyle="sm">
+            <Text size="400" weight="bold">
+              Recent Records
+            </Text>
+            <Box width="100%" marginBottom={4}>
+              <TextField
+                id="searchFilter"
+                type="text"
+                label="Search Workout"
+                value={searchFilter}
+                onChange={({ value }) => setSearchFilter(value)}
+                placeholder="Type to filter workouts"
+              />
+            </Box>
+            {Object.keys(groupedRecords)
+              .filter((workout) =>
+                workout.toLowerCase().includes(searchFilter.toLowerCase())
+              )
+              .map((workout) => {
+                const sortedRecords = sortRecords(groupedRecords[workout]);
+                const bestRecordIndex = getBestRecordIndex(sortedRecords);
+                return (
+                  <Box key={workout} marginBottom={4}>
+                    <Text size="300" weight="bold">
+                      {workout}
+                    </Text>
+                    <Table accessibilityLabel={`${workout} Records`}>
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.HeaderCell>Value</Table.HeaderCell>
+                          <Table.HeaderCell>Date</Table.HeaderCell>
+                          <Table.HeaderCell>Actions</Table.HeaderCell>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {sortedRecords.map((record, index) => (
+                          <Table.Row key={index}>
+                            <Table.Cell>
+                              <Box display="flex" alignItems="center">
+                                {index === bestRecordIndex && (
+                                  <Box marginEnd={2}>
+                                    <Icon
+                                      accessibilityLabel="Best record"
+                                      icon="star"
+                                      color="warning"
+                                      inline
+                                      size="16"
+                                    />
+                                  </Box>
+                                )}
+                                {record.recordType === RECORD_TYPES.REPS
+                                  ? `${record.recordValue} reps`
+                                  : record.recordValue}
+                              </Box>
+                            </Table.Cell>
+                            <Table.Cell>{formatDate(record.date)}</Table.Cell>
+                            <Table.Cell>
+                              <IconButton
+                                accessibilityLabel="Delete record"
+                                icon="trash-can"
+                                iconColor="red"
+                                size="md"
+                                onClick={() => deleteRecord(index)}
+                              />
+                            </Table.Cell>
+                          </Table.Row>
+                        ))}
+                      </Table.Body>
+                    </Table>
+                  </Box>
+                );
+              })}
+          </Box>
+        )}
       </Box>
-    </Box>
+    </ColorSchemeProvider>
   );
 }
 
