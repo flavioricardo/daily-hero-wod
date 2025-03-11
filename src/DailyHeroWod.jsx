@@ -13,17 +13,32 @@ import {
 } from "gestalt";
 import "gestalt/dist/gestalt.css";
 
+const WEIGHT_UNITS = {
+  KG: "kg",
+  LB: "lb",
+};
+
+const RECORD_TYPES = {
+  TIME: "time",
+  WEIGHT: "weight",
+  REPS: "reps",
+};
+
 function DailyHeroWod() {
   const [records, setRecords] = useState([]);
   const [workout, setWorkout] = useState("");
-  const [recordType, setRecordType] = useState("time");
+  const [recordType, setRecordType] = useState(RECORD_TYPES.TIME);
   const [recordValue, setRecordValue] = useState("");
-  const [weightUnit, setWeightUnit] = useState("kg");
+  const [weightUnit, setWeightUnit] = useState(WEIGHT_UNITS.KG);
   const [workoutOptions, setWorkoutOptions] = useState([]);
   const [error, setError] = useState("");
   const [isTypeReadOnly, setIsTypeReadOnly] = useState(false);
 
   useEffect(() => {
+    loadRecordsFromLocalStorage();
+  }, []);
+
+  const loadRecordsFromLocalStorage = () => {
     try {
       const savedData = localStorage.getItem("dailyhero_records");
       const savedRecords = savedData ? JSON.parse(savedData) : [];
@@ -42,7 +57,7 @@ function DailyHeroWod() {
       console.error("Error parsing localStorage data:", error);
       setRecords([]);
     }
-  }, []);
+  };
 
   const groupedRecords = records.reduce((acc, record) => {
     acc[record.workout] = acc[record.workout] || [];
@@ -52,9 +67,9 @@ function DailyHeroWod() {
 
   const clearFields = () => {
     setWorkout("");
-    setRecordType("time");
+    setRecordType(RECORD_TYPES.TIME);
     setRecordValue("");
-    setWeightUnit("kg");
+    setWeightUnit(WEIGHT_UNITS.KG);
     setIsTypeReadOnly(false);
     console.log("Fields cleared");
   };
@@ -72,7 +87,7 @@ function DailyHeroWod() {
       setIsTypeReadOnly(true);
       console.log("Matched record found:", matchedRecord);
     } else {
-      setRecordType("time");
+      setRecordType(RECORD_TYPES.TIME);
       setIsTypeReadOnly(false);
       console.log("No matched record found, setting recordType to 'time'");
     }
@@ -89,7 +104,7 @@ function DailyHeroWod() {
       setIsTypeReadOnly(true);
       console.log("Matched record found:", matchedRecord);
     } else {
-      setRecordType("time");
+      setRecordType(RECORD_TYPES.TIME);
       setIsTypeReadOnly(false);
       console.log("No matched record found, setting recordType to 'time'");
     }
@@ -107,10 +122,9 @@ function DailyHeroWod() {
   };
 
   const convertWeightToKg = (value, unit) => {
-    if (unit === "lb") {
-      return parseFloat(value) * 0.453592;
-    }
-    return parseFloat(value);
+    return unit === WEIGHT_UNITS.LB
+      ? parseFloat(value) * 0.453592
+      : parseFloat(value);
   };
 
   const addRecord = () => {
@@ -126,19 +140,14 @@ function DailyHeroWod() {
         workout,
         recordType,
         recordValue:
-          recordType === "weight"
+          recordType === RECORD_TYPES.WEIGHT
             ? `${recordValue} ${weightUnit}`
             : recordValue.trim(),
         date: new Date().toISOString(),
       };
       const newRecords = [...records, newRecord];
       setRecords(newRecords);
-      try {
-        localStorage.setItem("dailyhero_records", JSON.stringify(newRecords));
-        console.log("Record added and saved to localStorage:", newRecord);
-      } catch (error) {
-        console.error("Error saving to localStorage:", error);
-      }
+      saveRecordsToLocalStorage(newRecords);
       if (!workoutOptions.includes(workout)) {
         setWorkoutOptions([...workoutOptions, workout]);
         console.log("New workout added to options:", workout);
@@ -149,25 +158,29 @@ function DailyHeroWod() {
     }
   };
 
+  const saveRecordsToLocalStorage = (records) => {
+    try {
+      localStorage.setItem("dailyhero_records", JSON.stringify(records));
+      console.log("Records saved to localStorage");
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
+  };
+
   const deleteRecord = (index) => {
     console.log("Deleting record at index:", index);
     const updatedRecords = records.filter((_, i) => i !== index);
     setRecords(updatedRecords);
-    try {
-      localStorage.setItem("dailyhero_records", JSON.stringify(updatedRecords));
-      console.log("Record deleted and localStorage updated");
-    } catch (error) {
-      console.error("Error updating localStorage:", error);
-    }
+    saveRecordsToLocalStorage(updatedRecords);
   };
 
   const sortRecords = (records) => {
     return records.sort((a, b) => {
-      if (a.recordType === "time") {
+      if (a.recordType === RECORD_TYPES.TIME) {
         return a.recordValue.localeCompare(b.recordValue);
-      } else if (a.recordType === "reps") {
+      } else if (a.recordType === RECORD_TYPES.REPS) {
         return parseInt(b.recordValue) - parseInt(a.recordValue);
-      } else if (a.recordType === "weight") {
+      } else if (a.recordType === RECORD_TYPES.WEIGHT) {
         const [aValue, aUnit] = a.recordValue.split(" ");
         const [bValue, bUnit] = b.recordValue.split(" ");
         return (
@@ -228,9 +241,9 @@ function DailyHeroWod() {
             value={recordType}
             disabled={isTypeReadOnly}
           >
-            <SelectList.Option label="Time" value="time" />
-            <SelectList.Option label="Weight" value="weight" />
-            <SelectList.Option label="Reps" value="reps" />
+            <SelectList.Option label="Time" value={RECORD_TYPES.TIME} />
+            <SelectList.Option label="Weight" value={RECORD_TYPES.WEIGHT} />
+            <SelectList.Option label="Reps" value={RECORD_TYPES.REPS} />
           </SelectList>
         </Box>
         <Box
@@ -246,28 +259,30 @@ function DailyHeroWod() {
               type="text"
               mobileInputMode="numeric"
               label={
-                recordType === "time"
+                recordType === RECORD_TYPES.TIME
                   ? "Time (HH:MM:SS)"
-                  : recordType === "weight"
+                  : recordType === RECORD_TYPES.WEIGHT
                   ? "Weight"
                   : "Reps"
               }
               value={recordValue}
               onChange={({ value }) =>
                 setRecordValue(
-                  recordType === "time" ? formatTimeInput(value) : value
+                  recordType === RECORD_TYPES.TIME
+                    ? formatTimeInput(value)
+                    : value
                 )
               }
               placeholder={
-                recordType === "time"
+                recordType === RECORD_TYPES.TIME
                   ? "00:00:00"
-                  : recordType === "weight"
+                  : recordType === RECORD_TYPES.WEIGHT
                   ? "Enter weight"
                   : "Enter reps"
               }
             />
           </Box>
-          {recordType === "weight" && (
+          {recordType === RECORD_TYPES.WEIGHT && (
             <Box marginStart={2}>
               <SelectList
                 id="weightUnit"
@@ -276,8 +291,8 @@ function DailyHeroWod() {
                 onChange={({ value }) => setWeightUnit(value)}
                 value={weightUnit}
               >
-                <SelectList.Option label="kg" value="kg" />
-                <SelectList.Option label="lb" value="lb" />
+                <SelectList.Option label="kg" value={WEIGHT_UNITS.KG} />
+                <SelectList.Option label="lb" value={WEIGHT_UNITS.LB} />
               </SelectList>
             </Box>
           )}
@@ -334,7 +349,7 @@ function DailyHeroWod() {
                               />
                             </Box>
                           )}
-                          {record.recordType === "reps"
+                          {record.recordType === RECORD_TYPES.REPS
                             ? `${record.recordValue} reps`
                             : record.recordValue}
                         </Box>
