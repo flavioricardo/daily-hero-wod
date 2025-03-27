@@ -23,7 +23,7 @@ export default defineConfig({
         theme_color: "#f44336",
         background_color: "#ffffff",
         display: "standalone",
-        start_url: "/",
+        start_url: "/daily-hero-wod/",
         icons: [
           {
             src: "pwa-icon-192.png",
