@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Container,
@@ -402,7 +402,7 @@ function DailyHeroWod() {
     WEIGHT_UNITS.KG
   );
   const [recordDate, setRecordDate] = useState<Moment | null>(null);
-  const [workoutOptions, setWorkoutOptions] = useState<string[]>([]);
+  // const [workoutOptions, setWorkoutOptions] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [isTypeReadOnly, setIsTypeReadOnly] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
@@ -436,7 +436,7 @@ function DailyHeroWod() {
             .filter((w: string) => w)
         ),
       ] as string[];
-      setWorkoutOptions(uniqueWorkouts);
+      // setWorkoutOptions(uniqueWorkouts);
     } catch (error) {
       console.error("Error parsing localStorage data:", error);
       setRecords([]);
@@ -491,9 +491,9 @@ function DailyHeroWod() {
       const newRecords = [...records, newRecord];
       setRecords(newRecords);
       saveRecordsToLocalStorage(newRecords);
-      if (!workoutOptions.includes(workout)) {
-        setWorkoutOptions([...workoutOptions, workout]);
-      }
+      // if (!workoutOptions.includes(workout)) {
+      //   setWorkoutOptions([...workoutOptions, workout]);
+      // }
       clearFields();
       setToastMessage("Record saved successfully!");
     }
@@ -530,6 +530,18 @@ function DailyHeroWod() {
   const cancelDelete = () => {
     setRecordToDelete(null);
   };
+
+  const workoutOptions = useMemo(() => {
+    return Array.from(new Set(records.map((r) => r.workout).filter(Boolean)));
+  }, [records]);
+
+  const groupedRecords = useMemo(() => {
+    return records.reduce((acc: any, record) => {
+      acc[record.workout] = acc[record.workout] || [];
+      acc[record.workout].push(record);
+      return acc;
+    }, {});
+  }, [records]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -585,11 +597,7 @@ function DailyHeroWod() {
             />
           ) : (
             <RecordList
-              groupedRecords={records.reduce((acc: any, record) => {
-                acc[record.workout] = acc[record.workout] || [];
-                acc[record.workout].push(record);
-                return acc;
-              }, {})}
+              groupedRecords={groupedRecords}
               searchFilter={searchFilter}
               onSearchFilterChange={(value) => setSearchFilter(value)}
               deleteRecord={handleConfirmDelete}
