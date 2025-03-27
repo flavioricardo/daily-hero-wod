@@ -269,8 +269,14 @@ const RecordList = ({
           )
           .map((workout) => {
             const records = groupedRecords[workout];
-            const sortedRecords = sortRecords(records);
-            const bestRecordIndex = getBestRecordIndex(sortedRecords);
+            const sortedRecords = useMemo(
+              () => sortRecords(records),
+              [records]
+            );
+            const bestRecordIndex = useMemo(
+              () => getBestRecordIndex(sortedRecords),
+              [sortedRecords]
+            );
             const workoutType = sortedRecords[0]?.recordType || "Unknown";
 
             // Filtra e organiza os dados para o gráfico
@@ -419,6 +425,15 @@ function DailyHeroWod() {
       primary: { main: "#f44336" },
     },
   });
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("dailyhero_theme");
+    if (savedTheme === "dark") setDarkMode(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("dailyhero_theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   useEffect(() => {
     loadRecordsFromLocalStorage();
