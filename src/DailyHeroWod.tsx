@@ -26,11 +26,13 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import RecordForm from "./components/RecordForm";
 import RecordList from "./components/RecordList";
+import Login from "./components/Login";
 import { WEIGHT_UNITS, RECORD_TYPES, TOAST_DURATION } from "./utils/helpers";
 import { Moment } from "moment";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { auth } from "./firebase";
 
 function DailyHeroWod() {
-  // Estados
   const [records, setRecords] = useState<any[]>([]);
   const [workout, setWorkout] = useState("");
   const [recordType, setRecordType] = useState<keyof typeof RECORD_TYPES>(
@@ -47,8 +49,9 @@ function DailyHeroWod() {
   const [darkMode, setDarkMode] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<any | null>(null);
   const [toastMessage, setToastMessage] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
 
-  // Tema
   const theme = createTheme({
     palette: {
       mode: darkMode ? "dark" : "light",
@@ -56,7 +59,6 @@ function DailyHeroWod() {
     },
   });
 
-  // Efeitos
   useEffect(() => {
     const savedTheme = localStorage.getItem("dailyhero_theme");
     if (savedTheme === "dark") setDarkMode(true);
@@ -70,7 +72,13 @@ function DailyHeroWod() {
     loadRecordsFromLocalStorage();
   }, []);
 
-  // Funções auxiliares
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const loadRecordsFromLocalStorage = () => {
     try {
       const savedData = localStorage.getItem("dailyhero_records");
@@ -164,7 +172,10 @@ function DailyHeroWod() {
     setRecordToDelete(null);
   };
 
-  // Memoizações
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+
   const workoutOptions = useMemo(() => {
     return Array.from(new Set(records.map((r) => r.workout).filter(Boolean)));
   }, [records]);
@@ -177,7 +188,6 @@ function DailyHeroWod() {
     }, {});
   }, [records]);
 
-  // Renderização
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -194,9 +204,28 @@ function DailyHeroWod() {
             <Typography variant="h4" component="h1">
               Daily Hero - CrossFit Hero WODs, PR & Hyrox
             </Typography>
-            <IconButton onClick={() => setDarkMode(!darkMode)} color="inherit">
-              {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
+            <Box>
+              <IconButton
+                onClick={() => setDarkMode(!darkMode)}
+                color="inherit"
+              >
+                {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+              {user ? (
+                <>
+                  <Typography variant="body2" sx={{ mx: 2, display: "inline" }}>
+                    {user.email}
+                  </Typography>
+                  <Button color="inherit" onClick={handleLogout}>
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button color="inherit" onClick={() => setLoginOpen(true)}>
+                  Sign In
+                </Button>
+              )}
+            </Box>
           </Box>
 
           <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 4 }}>
@@ -253,6 +282,17 @@ function DailyHeroWod() {
                 Delete
               </Button>
             </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={loginOpen}
+            onClose={() => setLoginOpen(false)}
+            maxWidth="sm"
+            fullWidth
+          >
+            <Box p={3}>
+              <Login />
+            </Box>
           </Dialog>
 
           <Snackbar
