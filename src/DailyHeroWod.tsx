@@ -22,6 +22,11 @@ import {
   Stack,
   styled,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material";
 import TableCell, { tableCellClasses } from "@mui/material/TableCell";
@@ -240,11 +245,13 @@ const RecordForm = ({
 const RecordList = ({
   groupedRecords,
   searchFilter,
+  onSearchFilterChange,
   deleteRecord,
 }: {
   groupedRecords: { [key: string]: any[] };
   searchFilter: string;
-  deleteRecord: (index: number) => void;
+  onSearchFilterChange: (value: string) => void;
+  deleteRecord: (record: any) => void;
 }) => {
   return (
     <Box>
@@ -252,7 +259,7 @@ const RecordList = ({
         fullWidth
         label="Search Workout"
         value={searchFilter}
-        onChange={(e) => {}}
+        onChange={(e) => onSearchFilterChange(e.target.value)}
         sx={{ mb: 4 }}
       />
       <Stack spacing={4}>
@@ -340,7 +347,7 @@ const RecordList = ({
                               <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => deleteRecord(index)}
+                                onClick={() => deleteRecord(record)}
                               >
                                 <DeleteIcon />
                               </IconButton>
@@ -401,7 +408,10 @@ function DailyHeroWod() {
   const [activeTab, setActiveTab] = useState(0);
   const [searchFilter, setSearchFilter] = useState("");
   const [darkMode, setDarkMode] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(
+    null
+  );
+  const [toastMessage, setToastMessage] = useState("");
 
   const theme = createTheme({
     palette: {
@@ -485,14 +495,40 @@ function DailyHeroWod() {
         setWorkoutOptions([...workoutOptions, workout]);
       }
       clearFields();
-      setShowToast(true);
+      setToastMessage("Record saved successfully!");
     }
   };
 
-  const deleteRecord = (index: number) => {
-    const updatedRecords = records.filter((_, i) => i !== index);
-    setRecords(updatedRecords);
-    saveRecordsToLocalStorage(updatedRecords);
+  const [recordToDelete, setRecordToDelete] = useState<any | null>(null);
+
+  const handleConfirmDelete = (record: any) => {
+    setRecordToDelete(record);
+  };
+
+  const confirmDelete = () => {
+    if (!recordToDelete) return;
+
+    const index = records.findIndex(
+      (r) =>
+        r.workout === recordToDelete.workout &&
+        r.recordValue === recordToDelete.recordValue &&
+        r.date === recordToDelete.date &&
+        r.recordType === recordToDelete.recordType
+    );
+
+    if (index !== -1) {
+      const updatedRecords = [...records];
+      updatedRecords.splice(index, 1);
+      setRecords(updatedRecords);
+      saveRecordsToLocalStorage(updatedRecords);
+      setToastMessage("Record deleted successfully!");
+    }
+
+    setRecordToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setRecordToDelete(null);
   };
 
   return (
@@ -555,18 +591,35 @@ function DailyHeroWod() {
                 return acc;
               }, {})}
               searchFilter={searchFilter}
-              deleteRecord={deleteRecord}
+              onSearchFilterChange={(value) => setSearchFilter(value)}
+              deleteRecord={handleConfirmDelete}
             />
           )}
 
+          <Dialog open={!!recordToDelete} onClose={cancelDelete}>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                Are you sure you want to delete this record? This action cannot
+                be undone.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={cancelDelete}>Cancel</Button>
+              <Button onClick={confirmDelete} color="error" variant="contained">
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Snackbar
-            open={showToast}
+            open={!!toastMessage}
             autoHideDuration={TOAST_DURATION}
-            onClose={() => setShowToast(false)}
+            onClose={() => setToastMessage("")}
             anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
           >
             <Alert severity="success" variant="filled">
-              Record saved successfully!
+              {toastMessage}
             </Alert>
           </Snackbar>
         </Container>
