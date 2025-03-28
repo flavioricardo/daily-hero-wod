@@ -30,7 +30,7 @@ const RecordForm = ({
   onRecordDateChange,
   onAddRecord,
 }: {
-  workoutOptions: string[];
+  workoutOptions: { name: string; category: string }[];
   workout: string;
   recordType: keyof typeof RECORD_TYPES;
   recordValue: string;
@@ -49,13 +49,37 @@ const RecordForm = ({
       <Autocomplete
         freeSolo
         options={workoutOptions}
-        value={workout}
-        onChange={onWorkoutChange}
+        groupBy={(option) =>
+          typeof option === "string" ? "Custom" : option.category
+        }
+        getOptionLabel={(option) =>
+          typeof option === "string" ? option : option.name
+        }
+        value={
+          workoutOptions.find((w) => w.name === workout) || {
+            name: workout,
+            category: "Custom",
+          }
+        }
+        onChange={(_event, newValue) => {
+          let name = "";
+          if (typeof newValue === "string") {
+            name = newValue;
+          } else if (
+            newValue &&
+            typeof newValue === "object" &&
+            "name" in newValue
+          ) {
+            name = newValue.name;
+          }
+          onWorkoutChange(_event, name);
+        }}
         onInputChange={(_event, value) => onWorkoutChange(_event, value)}
         renderInput={(params) => (
           <TextField {...params} label="Workout or Personal Record" fullWidth />
         )}
       />
+
       <FormControl fullWidth>
         <InputLabel>Record Type</InputLabel>
         <Select
@@ -69,6 +93,7 @@ const RecordForm = ({
           <MenuItem value={RECORD_TYPES.REPS}>Reps</MenuItem>
         </Select>
       </FormControl>
+
       <Box sx={{ display: "flex", gap: 2 }}>
         <TextField
           fullWidth
@@ -93,6 +118,7 @@ const RecordForm = ({
             } as React.ChangeEvent<HTMLInputElement>)
           }
         />
+
         {recordType === RECORD_TYPES.WEIGHT && (
           <FormControl sx={{ minWidth: 120 }}>
             <InputLabel>Unit</InputLabel>
@@ -107,11 +133,14 @@ const RecordForm = ({
           </FormControl>
         )}
       </Box>
+
       <DatePicker
         label="Date"
         value={recordDate}
         onChange={onRecordDateChange}
+        format="DD/MM/YYYY"
       />
+
       <Button variant="contained" onClick={onAddRecord} fullWidth>
         Add Record
       </Button>

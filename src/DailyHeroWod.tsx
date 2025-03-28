@@ -30,9 +30,12 @@ import Login from "./components/Login";
 import { WEIGHT_UNITS, RECORD_TYPES, TOAST_DURATION } from "./utils/helpers";
 import { Moment } from "moment";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
+import { COLORS } from "./utils/styles";
+import { getDocs, collection } from "firebase/firestore";
 
 function DailyHeroWod() {
+  // Estados
   const [records, setRecords] = useState<any[]>([]);
   const [workout, setWorkout] = useState("");
   const [recordType, setRecordType] = useState<keyof typeof RECORD_TYPES>(
@@ -51,13 +54,36 @@ function DailyHeroWod() {
   const [toastMessage, setToastMessage] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [globalWorkouts, setGlobalWorkouts] = useState<
+    { name: string; type: keyof typeof RECORD_TYPES; category: string }[]
+  >([]);
 
+  // Tema
   const theme = createTheme({
     palette: {
       mode: darkMode ? "dark" : "light",
-      primary: { main: "#f44336" },
+      primary: { main: COLORS.main },
     },
   });
+
+  // Efeitos
+  useEffect(() => {
+    const fetchGlobalWorkouts = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "globalWorkouts"));
+        const workouts = snapshot.docs.map((doc) => ({
+          name: doc.data().name,
+          type: doc.data().type as keyof typeof RECORD_TYPES,
+          category: doc.data().category || "Other",
+        }));
+        setGlobalWorkouts(workouts);
+      } catch (error) {
+        console.error("Error loading global workouts:", error);
+      }
+    };
+
+    fetchGlobalWorkouts();
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("dailyhero_theme");
@@ -79,6 +105,7 @@ function DailyHeroWod() {
     return () => unsubscribe();
   }, []);
 
+  // Funções auxiliares
   const loadRecordsFromLocalStorage = () => {
     try {
       const savedData = localStorage.getItem("dailyhero_records");
@@ -112,14 +139,26 @@ function DailyHeroWod() {
       clearFields();
       return;
     }
+
     setWorkout(value);
+
     const matchedRecord = records.find((record) => record.workout === value);
+
     if (matchedRecord) {
       setRecordType(matchedRecord.recordType);
       setIsTypeReadOnly(true);
     } else {
-      setRecordType(RECORD_TYPES.TIME);
-      setIsTypeReadOnly(false);
+      const matchedGlobalWorkout = globalWorkouts.find(
+        (workout) => workout.name === value
+      );
+
+      if (matchedGlobalWorkout) {
+        setRecordType(matchedGlobalWorkout.type);
+        setIsTypeReadOnly(true);
+      } else {
+        setRecordType(RECORD_TYPES.TIME);
+        setIsTypeReadOnly(false);
+      }
     }
   };
 
@@ -176,9 +215,24 @@ function DailyHeroWod() {
     await signOut(auth);
   };
 
+  // Memoizações
   const workoutOptions = useMemo(() => {
-    return Array.from(new Set(records.map((r) => r.workout).filter(Boolean)));
-  }, [records]);
+    const userWorkouts = records
+      .map((r) => r.workout)
+      .filter(Boolean)
+      .map((name) => ({ name, category: "Custom" }));
+
+    const combined = [...globalWorkouts, ...userWorkouts];
+
+    const unique = Array.from(
+      new Map(combined.map((item) => [item.name, item])).values()
+    );
+
+    // Ordena por categoria para evitar erro no Autocomplete
+    unique.sort((a, b) => a.category.localeCompare(b.category));
+
+    return unique;
+  }, [globalWorkouts, records]);
 
   const groupedRecords = useMemo(() => {
     return records.reduce((acc: any, record) => {
@@ -188,6 +242,7 @@ function DailyHeroWod() {
     }, {});
   }, [records]);
 
+  // Renderização
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
