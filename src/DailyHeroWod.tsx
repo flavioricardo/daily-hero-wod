@@ -1,37 +1,40 @@
-import React, { useState, useEffect, useMemo, Suspense } from "react";
 import {
+  Alert,
   Box,
+  Button,
   Container,
   CssBaseline,
-  ThemeProvider,
-  createTheme,
-  Tabs,
-  Tab,
-  Typography,
-  IconButton,
-  Snackbar,
-  Alert,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Button,
+  IconButton,
   LinearProgress,
+  Snackbar,
+  Tab,
+  Tabs,
+  ThemeProvider,
+  Typography,
+  createTheme,
 } from "@mui/material";
 import {
-  LightMode as LightModeIcon,
   DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from "@mui/icons-material";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
-import Login from "./components/Login";
-import { WEIGHT_UNITS, RECORD_TYPES, TOAST_DURATION } from "./utils/helpers";
-import { Moment } from "moment";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { RECORD_TYPES, TOAST_DURATION, WEIGHT_UNITS } from "./utils/helpers";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
+import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
+import { collection, getDocs } from "firebase/firestore";
+
+import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { COLORS } from "./utils/styles";
-import { getDocs, collection } from "firebase/firestore";
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import Login from "./components/Login";
+import { Moment } from "moment";
+import TimelineIcon from "@mui/icons-material/Timeline";
 
 const RecordForm = React.lazy(() => import("./components/RecordForm"));
 const RecordList = React.lazy(() => import("./components/RecordList"));
@@ -295,8 +298,16 @@ function DailyHeroWod() {
                 onChange={(_e, newValue) => setActiveTab(newValue)}
                 variant="fullWidth"
               >
-                <Tab label="Add Record" />
-                <Tab label="View Records" />
+                <Tab
+                  label="Add Record"
+                  icon={<FitnessCenterIcon />}
+                  iconPosition="start"
+                />
+                <Tab
+                  label="View Records"
+                  icon={<TimelineIcon />}
+                  iconPosition="start"
+                />
               </Tabs>
             </Box>
 
