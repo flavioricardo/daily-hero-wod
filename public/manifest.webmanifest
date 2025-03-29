@@ -2,7 +2,7 @@
   "name": "Daily Hero",
   "short_name": "DailyHero",
   "description": "Track your CrossFit Hero WODs, Personal Records and Hyrox results with Daily Hero",
-  "start_url": "/",
+  "start_url": "/daily-hero-wod/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#f44336",
