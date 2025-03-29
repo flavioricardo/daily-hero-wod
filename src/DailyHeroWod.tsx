@@ -62,6 +62,30 @@ function DailyHeroWod() {
   const [globalWorkouts, setGlobalWorkouts] = useState<
     { name: string; type: keyof typeof RECORD_TYPES; category: string }[]
   >([]);
+  const [customWorkouts, setCustomWorkouts] = useState<
+    { name: string; category: string }[]
+  >([]);
+
+  useEffect(() => {
+    const fetchCustomWorkouts = async () => {
+      if (!user) return;
+
+      try {
+        const snapshot = await getDocs(
+          collection(db, "users", user.uid, "customWorkouts")
+        );
+        const custom = snapshot.docs.map((doc) => ({
+          name: doc.data().name,
+          category: "Custom",
+        }));
+        setCustomWorkouts(custom);
+      } catch (error) {
+        console.error("Error loading custom workouts:", error);
+      }
+    };
+
+    fetchCustomWorkouts();
+  }, [user]);
 
   // Tema
   const theme = createTheme({
@@ -193,7 +217,9 @@ function DailyHeroWod() {
           console.log("🔥 Record saved to Firestore!");
 
           // Se o workout não estiver na lista global, salvar como personalizado
-          const isGlobal = globalWorkouts.some((w) => w.name === workout);
+          const isGlobal = globalWorkouts.some(
+            (w) => w.name.toLowerCase() === workout.toLowerCase()
+          );
           if (!isGlobal) {
             const customRef = collection(
               db,
@@ -263,17 +289,21 @@ function DailyHeroWod() {
       .filter(Boolean)
       .map((name) => ({ name, category: "Custom" }));
 
-    const combined = [...globalWorkouts, ...userWorkouts];
+    const combined = [...globalWorkouts, ...customWorkouts, ...userWorkouts];
 
-    const unique = Array.from(
-      new Map(combined.map((item) => [item.name, item])).values()
-    );
+    const map = new Map();
 
-    // Ordena por categoria para evitar erro no Autocomplete
+    // Prioridade: globais > personalizados > locais
+    [...globalWorkouts, ...customWorkouts, ...userWorkouts].forEach((item) => {
+      const key = item.name.toLowerCase(); // case-insensitive
+      if (!map.has(key)) map.set(key, item);
+    });
+
+    const unique = Array.from(map.values());
     unique.sort((a, b) => a.category.localeCompare(b.category));
 
     return unique;
-  }, [globalWorkouts, records]);
+  }, [globalWorkouts, customWorkouts, records]);
 
   const groupedRecords = useMemo(() => {
     return records.reduce((acc: any, record) => {
