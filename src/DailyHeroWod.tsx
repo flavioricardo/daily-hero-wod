@@ -26,7 +26,15 @@ import { RECORD_TYPES, TOAST_DURATION, WEIGHT_UNITS } from "./utils/helpers";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
 
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { COLORS } from "./utils/styles";
@@ -35,6 +43,11 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import Login from "./components/Login";
 import { Moment } from "moment";
 import TimelineIcon from "@mui/icons-material/Timeline";
+import { clearFields } from "./utils/form";
+import {
+  loadRecordsFromLocalStorage,
+  saveRecordsToLocalStorage,
+} from "./utils/localStorage";
 
 const RecordForm = React.lazy(() => import("./components/RecordForm"));
 const RecordList = React.lazy(() => import("./components/RecordList"));
@@ -124,8 +137,31 @@ function DailyHeroWod() {
   }, [darkMode]);
 
   useEffect(() => {
-    loadRecordsFromLocalStorage();
-  }, []);
+    const fetchUserRecords = async () => {
+      if (!user) {
+        const records = loadRecordsFromLocalStorage("dailyhero_records");
+        setRecords(records);
+        return;
+      }
+
+      try {
+        const snapshot = await getDocs(
+          collection(db, "users", user.uid, "records")
+        );
+        const firebaseRecords = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setRecords(firebaseRecords);
+      } catch (error) {
+        console.error("Error loading user records from Firestore:", error);
+        const records = loadRecordsFromLocalStorage("dailyhero_records");
+        setRecords(records);
+      }
+    };
+
+    fetchUserRecords();
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -134,38 +170,25 @@ function DailyHeroWod() {
     return () => unsubscribe();
   }, []);
 
-  // Funções auxiliares
-  const loadRecordsFromLocalStorage = () => {
-    try {
-      const savedData = localStorage.getItem("dailyhero_records");
-      const savedRecords = savedData ? JSON.parse(savedData) : [];
-      setRecords(savedRecords);
-    } catch (error) {
-      console.error("Error parsing localStorage data:", error);
-      setRecords([]);
-    }
-  };
+  useEffect(() => {
+    const savedRecords = loadRecordsFromLocalStorage("dailyhero_records");
+    setRecords(savedRecords);
+  }, []);
 
-  const saveRecordsToLocalStorage = (records: any[]) => {
-    try {
-      localStorage.setItem("dailyhero_records", JSON.stringify(records));
-    } catch (error) {
-      console.error("Error saving to localStorage:", error);
-    }
-  };
-
-  const clearFields = () => {
-    setWorkout("");
-    setRecordType(RECORD_TYPES.TIME);
-    setRecordValue("");
-    setWeightUnit(WEIGHT_UNITS.KG);
-    setRecordDate(null);
-    setIsTypeReadOnly(false);
+  const handleSaveRecords = (records: any[]) => {
+    saveRecordsToLocalStorage("dailyhero_records", records);
   };
 
   const handleWorkoutChange = (_event: any, value: string | null) => {
     if (!value) {
-      clearFields();
+      clearFields(
+        setWorkout,
+        setRecordType,
+        setRecordValue,
+        setWeightUnit,
+        setRecordDate,
+        setIsTypeReadOnly
+      );
       return;
     }
 
@@ -205,8 +228,15 @@ function DailyHeroWod() {
 
       const newRecords = [...records, newRecord];
       setRecords(newRecords);
-      saveRecordsToLocalStorage(newRecords);
-      clearFields();
+      handleSaveRecords(newRecords);
+      clearFields(
+        setWorkout,
+        setRecordType,
+        setRecordValue,
+        setWeightUnit,
+        setRecordDate,
+        setIsTypeReadOnly
+      );
       setToastMessage("Record saved successfully!");
 
       // Se usuário estiver logado, salva no Firestore
@@ -252,7 +282,7 @@ function DailyHeroWod() {
     setRecordToDelete(record);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!recordToDelete) return;
 
     const index = records.findIndex(
@@ -267,8 +297,18 @@ function DailyHeroWod() {
       const updatedRecords = [...records];
       updatedRecords.splice(index, 1);
       setRecords(updatedRecords);
-      saveRecordsToLocalStorage(updatedRecords);
+      handleSaveRecords(updatedRecords);
       setToastMessage("Record deleted successfully!");
+    }
+
+    if (user && recordToDelete.id) {
+      try {
+        const ref = doc(db, "users", user.uid, "records", recordToDelete.id);
+        await deleteDoc(ref);
+        console.log("🗑 Record deleted from Firestore!");
+      } catch (error) {
+        console.error("Error deleting from Firestore:", error);
+      }
     }
 
     setRecordToDelete(null);
@@ -288,8 +328,6 @@ function DailyHeroWod() {
       .map((r) => r.workout)
       .filter(Boolean)
       .map((name) => ({ name, category: "Custom" }));
-
-    const combined = [...globalWorkouts, ...customWorkouts, ...userWorkouts];
 
     const map = new Map();
 
