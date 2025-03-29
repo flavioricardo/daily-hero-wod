@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import {
   Box,
   Container,
@@ -17,6 +17,7 @@ import {
   DialogContentText,
   DialogTitle,
   Button,
+  LinearProgress,
 } from "@mui/material";
 import {
   LightMode as LightModeIcon,
@@ -24,8 +25,6 @@ import {
 } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
-import RecordForm from "./components/RecordForm";
-import RecordList from "./components/RecordList";
 import Login from "./components/Login";
 import { WEIGHT_UNITS, RECORD_TYPES, TOAST_DURATION } from "./utils/helpers";
 import { Moment } from "moment";
@@ -33,6 +32,9 @@ import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { COLORS } from "./utils/styles";
 import { getDocs, collection } from "firebase/firestore";
+
+const RecordForm = React.lazy(() => import("./components/RecordForm"));
+const RecordList = React.lazy(() => import("./components/RecordList"));
 
 function DailyHeroWod() {
   // Estados
@@ -244,125 +246,134 @@ function DailyHeroWod() {
 
   // Renderização
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterMoment}>
-        <Container maxWidth="md" sx={{ py: 4 }}>
-          <Box
-            sx={{
-              mb: 4,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="h4" component="h1">
-              Daily Hero - CrossFit Hero WODs, PR & Hyrox
-            </Typography>
-            <Box>
-              <IconButton
-                onClick={() => setDarkMode(!darkMode)}
-                color="inherit"
-              >
-                {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-              </IconButton>
-              {user ? (
-                <>
-                  <Typography variant="body2" sx={{ mx: 2, display: "inline" }}>
-                    {user.email}
-                  </Typography>
-                  <Button color="inherit" onClick={handleLogout}>
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
-                <Button color="inherit" onClick={() => setLoginOpen(true)}>
-                  Sign In
-                </Button>
-              )}
-            </Box>
-          </Box>
-
-          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 4 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(_e, newValue) => setActiveTab(newValue)}
-              variant="fullWidth"
+    <Suspense fallback={<LinearProgress />}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LocalizationProvider dateAdapter={AdapterMoment}>
+          <Container maxWidth="md" sx={{ py: 4 }}>
+            <Box
+              sx={{
+                mb: 4,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              <Tab label="Add Record" />
-              <Tab label="View Records" />
-            </Tabs>
-          </Box>
-
-          {activeTab === 0 ? (
-            <RecordForm
-              workoutOptions={workoutOptions}
-              workout={workout}
-              recordType={recordType}
-              recordValue={recordValue}
-              weightUnit={weightUnit}
-              recordDate={recordDate}
-              isTypeReadOnly={isTypeReadOnly}
-              onWorkoutChange={handleWorkoutChange}
-              onRecordTypeChange={(e) =>
-                setRecordType(e.target.value as keyof typeof RECORD_TYPES)
-              }
-              onRecordValueChange={(e) => setRecordValue(e.target.value)}
-              onWeightUnitChange={(e) =>
-                setWeightUnit(e.target.value as keyof typeof WEIGHT_UNITS)
-              }
-              onRecordDateChange={setRecordDate}
-              onAddRecord={addRecord}
-            />
-          ) : (
-            <RecordList
-              groupedRecords={groupedRecords}
-              searchFilter={searchFilter}
-              onSearchFilterChange={setSearchFilter}
-              deleteRecord={handleConfirmDelete}
-            />
-          )}
-
-          <Dialog open={!!recordToDelete} onClose={cancelDelete}>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogContent>
-              <DialogContentText>
-                Are you sure you want to delete this record? This action cannot
-                be undone.
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={cancelDelete}>Cancel</Button>
-              <Button onClick={confirmDelete} color="error" variant="contained">
-                Delete
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={loginOpen}
-            onClose={() => setLoginOpen(false)}
-            maxWidth="sm"
-            fullWidth
-          >
-            <Box p={3}>
-              <Login />
+              <Typography variant="h4" component="h1">
+                Daily Hero - CrossFit Hero WODs, PR & Hyrox
+              </Typography>
+              <Box>
+                <IconButton
+                  onClick={() => setDarkMode(!darkMode)}
+                  color="inherit"
+                >
+                  {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+                </IconButton>
+                {user ? (
+                  <>
+                    <Typography
+                      variant="body2"
+                      sx={{ mx: 2, display: "inline" }}
+                    >
+                      {user.email}
+                    </Typography>
+                    <Button color="inherit" onClick={handleLogout}>
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <Button color="inherit" onClick={() => setLoginOpen(true)}>
+                    Sign In
+                  </Button>
+                )}
+              </Box>
             </Box>
-          </Dialog>
 
-          <Snackbar
-            open={!!toastMessage}
-            autoHideDuration={TOAST_DURATION}
-            onClose={() => setToastMessage("")}
-            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-          >
-            <Alert severity="success" variant="filled">
-              {toastMessage}
-            </Alert>
-          </Snackbar>
-        </Container>
-      </LocalizationProvider>
-    </ThemeProvider>
+            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 4 }}>
+              <Tabs
+                value={activeTab}
+                onChange={(_e, newValue) => setActiveTab(newValue)}
+                variant="fullWidth"
+              >
+                <Tab label="Add Record" />
+                <Tab label="View Records" />
+              </Tabs>
+            </Box>
+
+            {activeTab === 0 ? (
+              <RecordForm
+                workoutOptions={workoutOptions}
+                workout={workout}
+                recordType={recordType}
+                recordValue={recordValue}
+                weightUnit={weightUnit}
+                recordDate={recordDate}
+                isTypeReadOnly={isTypeReadOnly}
+                onWorkoutChange={handleWorkoutChange}
+                onRecordTypeChange={(e) =>
+                  setRecordType(e.target.value as keyof typeof RECORD_TYPES)
+                }
+                onRecordValueChange={(e) => setRecordValue(e.target.value)}
+                onWeightUnitChange={(e) =>
+                  setWeightUnit(e.target.value as keyof typeof WEIGHT_UNITS)
+                }
+                onRecordDateChange={setRecordDate}
+                onAddRecord={addRecord}
+              />
+            ) : (
+              <RecordList
+                groupedRecords={groupedRecords}
+                searchFilter={searchFilter}
+                onSearchFilterChange={setSearchFilter}
+                deleteRecord={handleConfirmDelete}
+              />
+            )}
+
+            <Dialog open={!!recordToDelete} onClose={cancelDelete}>
+              <DialogTitle>Confirm Delete</DialogTitle>
+              <DialogContent>
+                <DialogContentText>
+                  Are you sure you want to delete this record? This action
+                  cannot be undone.
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={cancelDelete}>Cancel</Button>
+                <Button
+                  onClick={confirmDelete}
+                  color="error"
+                  variant="contained"
+                >
+                  Delete
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            <Dialog
+              open={loginOpen}
+              onClose={() => setLoginOpen(false)}
+              maxWidth="sm"
+              fullWidth
+            >
+              <Box p={3}>
+                <Login />
+              </Box>
+            </Dialog>
+
+            <Snackbar
+              open={!!toastMessage}
+              autoHideDuration={TOAST_DURATION}
+              onClose={() => setToastMessage("")}
+              anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+              <Alert severity="success" variant="filled">
+                {toastMessage}
+              </Alert>
+            </Snackbar>
+          </Container>
+        </LocalizationProvider>
+      </ThemeProvider>
+    </Suspense>
   );
 }
 
