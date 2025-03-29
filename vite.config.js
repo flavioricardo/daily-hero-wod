@@ -21,7 +21,7 @@ export default defineConfig({
         short_name: "Daily Hero",
         description: "Track your Hero WODs and Hyrox records!",
         theme_color: "#f44336",
-        background_color: "#ffffff",
+        background_color: "#000000",
         display: "standalone",
         start_url: "/daily-hero-wod/",
         icons: [
