@@ -26,7 +26,7 @@ import { RECORD_TYPES, TOAST_DURATION, WEIGHT_UNITS } from "./utils/helpers";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { COLORS } from "./utils/styles";
@@ -167,7 +167,7 @@ function DailyHeroWod() {
     }
   };
 
-  const addRecord = () => {
+  const addRecord = async () => {
     if (workout && recordValue && recordDate) {
       const newRecord = {
         workout,
@@ -178,11 +178,47 @@ function DailyHeroWod() {
             : recordValue.trim(),
         date: recordDate.toISOString(),
       };
+
       const newRecords = [...records, newRecord];
       setRecords(newRecords);
       saveRecordsToLocalStorage(newRecords);
       clearFields();
       setToastMessage("Record saved successfully!");
+
+      // Se usuário estiver logado, salva no Firestore
+      if (user) {
+        try {
+          // Salvar o record
+          await addDoc(collection(db, "users", user.uid, "records"), newRecord);
+          console.log("🔥 Record saved to Firestore!");
+
+          // Se o workout não estiver na lista global, salvar como personalizado
+          const isGlobal = globalWorkouts.some((w) => w.name === workout);
+          if (!isGlobal) {
+            const customRef = collection(
+              db,
+              "users",
+              user.uid,
+              "customWorkouts"
+            );
+
+            // Verifica se já existe
+            const existing = await getDocs(
+              query(customRef, where("name", "==", workout))
+            );
+
+            if (existing.empty) {
+              await addDoc(customRef, {
+                name: workout,
+                createdAt: new Date().toISOString(),
+              });
+              console.log("✅ Custom workout saved!");
+            }
+          }
+        } catch (error) {
+          console.error("❌ Error saving to Firestore:", error);
+        }
+      }
     }
   };
 
