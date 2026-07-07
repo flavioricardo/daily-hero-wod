@@ -27,13 +27,20 @@ const Header: React.FC<HeaderProps> = ({
       sx={{
         mb: 4,
         display: "flex",
+        flexWrap: "wrap",
+        gap: 1,
         justifyContent: "space-between",
         alignItems: "center",
       }}
     >
-      <Typography variant="h4" component="h1">
-        Daily Hero - CrossFit Hero WODs, PR & Hyrox
-      </Typography>
+      <Box>
+        <Typography variant="h4" component="h1">
+          Daily Hero
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          CrossFit Hero WODs · PRs · Hyrox
+        </Typography>
+      </Box>
       <Box>
         <IconButton onClick={toggleTheme} color="inherit">
           {darkMode ? <LightModeIcon /> : <DarkModeIcon />}

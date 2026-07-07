@@ -14,7 +14,6 @@ import {
   Tab,
   Tabs,
   ThemeProvider,
-  createTheme,
 } from "@mui/material";
 import { RECORD_TYPES, TOAST_DURATION, WEIGHT_UNITS } from "./utils/helpers";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
@@ -35,7 +34,6 @@ import {
 } from "./utils/localStorage";
 
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
-import { COLORS } from "./utils/styles";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import Header from "./components/Header";
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -43,6 +41,7 @@ import Login from "./components/Login";
 import { Moment } from "moment";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import { clearFields } from "./utils/form";
+import { buildTheme } from "./utils/theme";
 import type { WorkoutRecord } from "./types/records";
 
 const RecordForm = React.lazy(() => import("./components/RecordForm"));
@@ -97,16 +96,7 @@ function DailyHeroWod() {
   }, [user]);
 
   // Tema
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: darkMode ? "dark" : "light",
-          primary: { main: COLORS.main },
-        },
-      }),
-    [darkMode]
-  );
+  const theme = useMemo(() => buildTheme(darkMode), [darkMode]);
 
   // Efeitos
   useEffect(() => {

@@ -12,11 +12,22 @@ import {
   sortRecords,
 } from "../utils/helpers";
 import type { WorkoutRecord } from "../types/records";
+import { RECORD_TYPE_COLORS } from "../utils/styles";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: theme.palette.common.black,
-    color: theme.palette.common.white,
+    backgroundColor:
+      theme.palette.mode === "dark"
+        ? theme.palette.background.default
+        : theme.palette.text.primary,
+    color:
+      theme.palette.mode === "dark"
+        ? theme.palette.text.primary
+        : theme.palette.background.paper,
+    fontWeight: 600,
+    letterSpacing: "0.03em",
+    textTransform: "uppercase",
+    fontSize: 12,
   },
   [`&.${tableCellClasses.body}`]: {
     fontSize: 14,
@@ -64,22 +75,30 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
     [chartsData]
   );
 
+  const spineColor = (mode: "light" | "dark") =>
+    RECORD_TYPE_COLORS[workoutType as keyof typeof RECORD_TYPE_COLORS]?.[
+      mode
+    ] ?? RECORD_TYPE_COLORS.REPS[mode];
+
   return (
-    <Paper elevation={3}>
+    <Paper
+      elevation={2}
+      sx={(theme) => ({
+        borderTop: `4px solid ${spineColor(theme.palette.mode)}`,
+        overflow: "hidden",
+      })}
+    >
       <Box sx={{ p: 2 }}>
         <Typography display="inline-block" variant="h6" mr={1} gutterBottom>
           {workout}
         </Typography>
         <Chip
           label={workoutType}
-          color={
-            workoutType === RECORD_TYPES.TIME
-              ? "primary"
-              : workoutType === RECORD_TYPES.WEIGHT
-              ? "secondary"
-              : "default"
-          }
-          sx={{ mb: "0.35em" }}
+          sx={(theme) => ({
+            mb: "0.35em",
+            color: "#fff",
+            backgroundColor: spineColor(theme.palette.mode),
+          })}
           size="small"
         />
         <Paper sx={{ mt: 1 }}>
@@ -93,13 +112,26 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
             </Box>
             <Box component="tbody">
               {sortedRecords.map((record, index) => (
-                <StyledTableRow key={`${record.date}-${record.recordValue}`}>
+                <StyledTableRow
+                  key={`${record.date}-${record.recordValue}`}
+                  style={
+                    index === bestRecordIndex
+                      ? { outline: "none", fontWeight: 600 }
+                      : undefined
+                  }
+                >
                   <StyledTableCell>
                     <Box
                       sx={{ display: "flex", alignItems: "center", gap: 1 }}
                     >
                       {index === bestRecordIndex && (
-                        <StarIcon color="warning" fontSize="small" />
+                        <Chip
+                          icon={<StarIcon fontSize="small" />}
+                          label="PR"
+                          color="warning"
+                          size="small"
+                          sx={{ fontWeight: 700 }}
+                        />
                       )}
                       {record.recordType === RECORD_TYPES.REPS
                         ? `${record.recordValue} reps`
