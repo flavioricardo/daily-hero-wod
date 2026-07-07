@@ -43,13 +43,14 @@ import Login from "./components/Login";
 import { Moment } from "moment";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import { clearFields } from "./utils/form";
+import type { WorkoutRecord } from "./types/records";
 
 const RecordForm = React.lazy(() => import("./components/RecordForm"));
 const RecordList = React.lazy(() => import("./components/RecordList"));
 
 function DailyHeroWod() {
   // Estados
-  const [records, setRecords] = useState<any[]>([]);
+  const [records, setRecords] = useState<WorkoutRecord[]>([]);
   const [workout, setWorkout] = useState("");
   const [recordType, setRecordType] = useState<keyof typeof RECORD_TYPES>(
     RECORD_TYPES.TIME
@@ -63,7 +64,7 @@ function DailyHeroWod() {
   const [activeTab, setActiveTab] = useState(0);
   const [searchFilter, setSearchFilter] = useState("");
   const [darkMode, setDarkMode] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState<any | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<WorkoutRecord | null>(null);
   const [toastMessage, setToastMessage] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -96,12 +97,16 @@ function DailyHeroWod() {
   }, [user]);
 
   // Tema
-  const theme = createTheme({
-    palette: {
-      mode: darkMode ? "dark" : "light",
-      primary: { main: COLORS.main },
-    },
-  });
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode: darkMode ? "dark" : "light",
+          primary: { main: COLORS.main },
+        },
+      }),
+    [darkMode]
+  );
 
   // Efeitos
   useEffect(() => {
@@ -165,11 +170,6 @@ function DailyHeroWod() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const savedRecords = loadRecordsFromLocalStorage("dailyhero_records");
-    setRecords(savedRecords);
-  }, []);
-
   const handleSaveRecords = (records: any[]) => {
     saveRecordsToLocalStorage("dailyhero_records", records);
   };
@@ -211,7 +211,7 @@ function DailyHeroWod() {
 
   const addRecord = async () => {
     if (workout && recordValue && recordDate) {
-      const newRecord = {
+      const newRecord: WorkoutRecord = {
         workout,
         recordType,
         recordValue:
@@ -237,9 +237,17 @@ function DailyHeroWod() {
       // Se usuário estiver logado, salva no Firestore
       if (user) {
         try {
-          // Salvar o record
-          await addDoc(collection(db, "users", user.uid, "records"), newRecord);
-          console.log("🔥 Record saved to Firestore!");
+          // Salvar o record e guardar o id para permitir delete remoto depois
+          const docRef = await addDoc(
+            collection(db, "users", user.uid, "records"),
+            newRecord
+          );
+          const savedRecord: WorkoutRecord = { ...newRecord, id: docRef.id };
+          const recordsWithId = newRecords.map((r) =>
+            r === newRecord ? savedRecord : r
+          );
+          setRecords(recordsWithId);
+          handleSaveRecords(recordsWithId);
 
           // Se o workout não estiver na lista global, salvar como personalizado
           const isGlobal = globalWorkouts.some(
@@ -273,7 +281,7 @@ function DailyHeroWod() {
     }
   };
 
-  const handleConfirmDelete = (record: any) => {
+  const handleConfirmDelete = (record: WorkoutRecord) => {
     setRecordToDelete(record);
   };
 
@@ -339,7 +347,7 @@ function DailyHeroWod() {
   }, [globalWorkouts, customWorkouts, records]);
 
   const groupedRecords = useMemo(() => {
-    return records.reduce((acc: any, record) => {
+    return records.reduce<Record<string, WorkoutRecord[]>>((acc, record) => {
       acc[record.workout] = acc[record.workout] || [];
       acc[record.workout].push(record);
       return acc;

@@ -1,4 +1,5 @@
 import moment from "moment";
+import type { WorkoutRecord } from "../types/records";
 
 export const WEIGHT_UNITS = {
   KG: "KG",
@@ -35,6 +36,30 @@ export const formatDate = (date: string | Date): string => {
 };
 
 /**
+ * Converte "HH:MM:SS", "MM:SS" ou "SS" para segundos.
+ * Retorna NaN para valores inválidos.
+ */
+export const timeToSeconds = (value: string): number => {
+  const parts = value.split(":").map((p) => parseInt(p, 10));
+  if (parts.some((p) => Number.isNaN(p))) return NaN;
+  return parts.reduce((total, part) => total * 60 + part, 0);
+};
+
+/**
+ * Formata segundos como "HH:MM:SS" (ou "MM:SS" quando menor que 1h).
+ */
+export const secondsToTime = (totalSeconds: number): string => {
+  if (!Number.isFinite(totalSeconds)) return "";
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return hours > 0
+    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}`;
+};
+
+/**
  * Converte um peso para quilogramas (kg).
  * @param value - O valor do peso como string.
  * @param unit - A unidade do peso (KG ou LB).
@@ -47,30 +72,44 @@ export const convertWeightToKg = (value: string, unit: string): number => {
 };
 
 /**
+ * Extrai o valor numérico de um registro para ordenação e gráficos.
+ * TIME retorna segundos, WEIGHT retorna kg, REPS retorna o inteiro.
+ */
+export const recordNumericValue = (record: WorkoutRecord): number => {
+  if (record.recordType === RECORD_TYPES.TIME) {
+    return timeToSeconds(record.recordValue);
+  }
+  if (record.recordType === RECORD_TYPES.WEIGHT) {
+    const [value, unit] = record.recordValue.split(" ");
+    return convertWeightToKg(value, unit);
+  }
+  return parseInt(record.recordValue, 10);
+};
+
+/**
  * Ordena registros com base no tipo ou na data.
+ * Não muta a lista original — sempre retorna uma cópia ordenada.
  * @param records - A lista de registros.
  * @param sortByDate - Define se a ordenação será feita pela data.
- * @returns A lista de registros ordenada.
+ * @returns Nova lista de registros ordenada.
  */
-export const sortRecords = (records: any[], sortByDate: boolean = false) => {
+export const sortRecords = (
+  records: WorkoutRecord[],
+  sortByDate: boolean = false
+): WorkoutRecord[] => {
+  const copy = [...records];
   if (sortByDate) {
-    return records.sort(
+    return copy.sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   }
-  return records.sort((a, b) => {
+  return copy.sort((a, b) => {
     if (a.recordType === RECORD_TYPES.TIME) {
-      return a.recordValue.localeCompare(b.recordValue);
-    } else if (a.recordType === RECORD_TYPES.REPS) {
-      return parseInt(b.recordValue) - parseInt(a.recordValue);
-    } else if (a.recordType === RECORD_TYPES.WEIGHT) {
-      const [aValue, aUnit] = a.recordValue.split(" ");
-      const [bValue, bUnit] = b.recordValue.split(" ");
-      return (
-        convertWeightToKg(bValue, bUnit) - convertWeightToKg(aValue, aUnit)
-      );
+      // Menor tempo = melhor
+      return recordNumericValue(a) - recordNumericValue(b);
     }
-    return 0;
+    // Maior peso/reps = melhor
+    return recordNumericValue(b) - recordNumericValue(a);
   });
 };
 
@@ -79,8 +118,8 @@ export const sortRecords = (records: any[], sortByDate: boolean = false) => {
  * @param records - A lista de registros.
  * @returns O índice do melhor registro ou -1 se a lista estiver vazia.
  */
-export const getBestRecordIndex = (records: any[]): number => {
+export const getBestRecordIndex = (records: WorkoutRecord[]): number => {
   if (!records.length) return -1;
-  const sorted = sortRecords([...records]);
+  const sorted = sortRecords(records);
   return records.indexOf(sorted[0]);
 };
