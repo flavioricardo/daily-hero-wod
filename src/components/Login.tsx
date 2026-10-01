@@ -16,6 +16,7 @@ import {
   Paper,
   CircularProgress,
   useTheme,
+  type Theme,
 } from "@mui/material";
 import React from "react";
 
@@ -41,6 +42,35 @@ const GoogleIcon = () => (
     />
   </svg>
 );
+
+// Neutral "Sign in with Google" button from Google's branding guidelines
+// (light/dark themes): fixed colors, not the app's primary color. Hover and
+// focus only touch the background/outline, never the official "G".
+const googleButtonSx = (theme: Theme) => {
+  const c =
+    theme.palette.mode === "dark"
+      ? { bg: "#131314", border: "#8E918F", text: "#E3E3E3", hover: "rgba(227,227,227,0.08)" }
+      : { bg: "#FFFFFF", border: "#747775", text: "#1F1F1F", hover: "rgba(31,31,31,0.08)" };
+  return {
+    bgcolor: c.bg,
+    color: c.text,
+    border: `1px solid ${c.border}`,
+    fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+    fontWeight: 500,
+    fontSize: "0.875rem",
+    lineHeight: "1.25rem",
+    minHeight: "2.5rem",
+    px: "0.75rem",
+    "& .MuiButton-startIcon": { ml: 0, mr: "0.625rem" },
+    "@media (hover: hover)": {
+      "&:hover": {
+        bgcolor: c.bg,
+        backgroundImage: `linear-gradient(${c.hover}, ${c.hover})`,
+      },
+    },
+    "&.Mui-focusVisible": { outline: `2px solid ${c.text}`, outlineOffset: "2px" },
+  };
+};
 
 export default function Login() {
   const theme = useTheme();
@@ -148,10 +178,9 @@ export default function Login() {
       <Box mt={2}>
         <Button
           startIcon={<GoogleIcon />}
-          variant="outlined"
-          color="primary"
           fullWidth
           onClick={loginWithGoogle}
+          sx={googleButtonSx}
         >
           Sign in with Google
         </Button>
