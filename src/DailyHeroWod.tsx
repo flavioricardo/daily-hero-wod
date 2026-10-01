@@ -34,12 +34,11 @@ import {
 } from "./utils/localStorage";
 
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import { ChartLine, Dumbbell } from "lucide-react";
 import Header from "./components/Header";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import Login from "./components/Login";
 import { Moment } from "moment";
-import TimelineIcon from "@mui/icons-material/Timeline";
 import { clearFields } from "./utils/form";
 import { buildTheme } from "./utils/theme";
 import type { WorkoutRecord } from "./types/records";
@@ -367,12 +366,12 @@ function DailyHeroWod() {
               >
                 <Tab
                   label="Add Record"
-                  icon={<FitnessCenterIcon />}
+                  icon={<Dumbbell />}
                   iconPosition="start"
                 />
                 <Tab
                   label="View Records"
-                  icon={<TimelineIcon />}
+                  icon={<ChartLine />}
                   iconPosition="start"
                 />
               </Tabs>
