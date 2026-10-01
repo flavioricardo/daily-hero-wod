@@ -1,8 +1,5 @@
 import { Box, Button, IconButton, Typography } from "@mui/material";
-import {
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-} from "@mui/icons-material";
+import { Moon, Sun } from "lucide-react";
 
 import React from "react";
 import { User } from "firebase/auth";
@@ -42,8 +39,12 @@ const Header: React.FC<HeaderProps> = ({
         </Typography>
       </Box>
       <Box>
-        <IconButton onClick={toggleTheme} color="inherit">
-          {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+        <IconButton
+          onClick={toggleTheme}
+          color="inherit"
+          aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {darkMode ? <Sun /> : <Moon />}
         </IconButton>
         {user ? (
           <>

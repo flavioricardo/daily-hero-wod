@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Box, Chip, IconButton, Paper, Typography, styled } from "@mui/material";
 import TableCell, { tableCellClasses } from "@mui/material/TableCell";
 import { LineChart } from "@mui/x-charts/LineChart";
-import { Delete as DeleteIcon, Star as StarIcon } from "@mui/icons-material";
+import { Star, Trash } from "lucide-react";
 import {
   RECORD_TYPES,
   formatDate,
@@ -126,7 +126,7 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
                     >
                       {index === bestRecordIndex && (
                         <Chip
-                          icon={<StarIcon fontSize="small" />}
+                          icon={<Star size="1em" fill="currentColor" />}
                           label="PR"
                           color="warning"
                           size="small"
@@ -148,7 +148,7 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
                       )}`}
                       onClick={() => deleteRecord(record)}
                     >
-                      <DeleteIcon />
+                      <Trash />
                     </IconButton>
                   </StyledTableCell>
                 </StyledTableRow>
